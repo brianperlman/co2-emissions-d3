@@ -3,8 +3,18 @@
 <head>
     <meta charset="utf-8">
     <title>Line Chart of Worldwide CO2 Emissions</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
     <style type="text/css">
       h2,h3{font-family: Times;}
+      #chart svg{
+        display:block;
+        margin:0 auto;
+      }
+      #form{
+        width:75%;
+        margin: 0 auto;
+      }
     </style>
 </head>
 <body>
@@ -12,12 +22,25 @@
 <h2>
 CO2 Emissions (tons per person)
 </h2>
-<h3>
-  Carbon dioxide emissions from the burning of fossil fuels in metric tons of CO<sub>2</sub> per person.
-</h3>
-<h4>
+<h5>
+  <b>Carbon dioxide emissions from the burning of fossil fuels in metric tons of CO<sub>2</sub> per person.</b>
+</h5>
+<h5>
   <a href="https://cdiac.ess-dive.lbl.gov/" target="_blank">Source</a>
-</h4>
+</h5>
+<div id="chart"></div>
+
+<div id="form" class="text-center">
+  <form class="form-inline justify-content-center">
+    <div class="form-group mb-2 text-center w-75">
+      <label for="search-box" class="sr-only">Country</label>
+      <input id="search-box" type="text" class="form-control w-75" placeholder="United States"> 
+      <button type="button" id="search-button" class="btn btn-secondary ml-2">Search Country</button>
+
+    </div>
+  </form>
+</div>
+
 <script src="js/d3.v5.min.js"></script>
 <script type="text/javascript">
 
@@ -41,22 +64,22 @@ var x = d3.scaleTime().range([0, width]);
 var y = d3.scaleLinear().range([height, 0]);
 
 
-
+// creates the lines
 var line = d3.line()
     .x(function(d) { return x(d.year); })
     .y(function(d) { return y(d.value); })
     .curve(d3.curveMonotoneX);
     //For examples of different curve styles, see:
     // https://bl.ocks.org/d3noob/ced1b9b18bd8192d2c898884033b5529
-
-var svg = d3.select("body")
+// h and w of svg
+var svg = d3.select("#chart")
     .append("svg")
     .attr("width", width + margin.left + margin.right)
     .attr("height", height + margin.top + margin.bottom);
-
+// grouping and moves it based on margins
 var chart = svg.append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
+// downloads data from csv
 d3.csv("co2_src.csv").then(function(data) {
 
 
@@ -64,7 +87,7 @@ d3.csv("co2_src.csv").then(function(data) {
   
 
   //console.log(data);
-
+//creates var fixedData
     var fixedData = [];
 // set up fixedData, countries as columns and years as rows.
     data.columns.forEach(function(d) {
@@ -78,21 +101,21 @@ d3.csv("co2_src.csv").then(function(data) {
     //   return d.country=="Kenya"
     // });
 
-  
+  // hover over line, moves to front
     d3.selection.prototype.moveToFront = function() {
       return this.each(function(){
       this.parentNode.appendChild(this);
       });
     };
-
+// extent: pulls lesat and most values out of dataset and sets domain
     x.domain(d3.extent(fixedData, function(d) { return d.year; }));
     y.domain(d3.extent(fixedData, function(d) { return d.value; }));
-
+// takes grouping for bottom axis
     svg.append("g")
         .attr("class", "x axis")
         .attr("transform", "translate(" + margin.left + "," + (height + margin.top) + ")")
         .call(d3.axisBottom(x));
-
+//background
     svg.append("rect")
        .attr("x",margin.left)
        .attr("y",margin.top)
@@ -100,7 +123,7 @@ d3.csv("co2_src.csv").then(function(data) {
        .attr("height",145)
        .attr("fill","white")
        .attr("opacity",.8)
-
+// labeling the axis
     svg.append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
         .call(d3.axisLeft(y))
@@ -113,7 +136,7 @@ d3.csv("co2_src.csv").then(function(data) {
         .text("CO2 emissions (metric tons per person)");
 
 
-
+// hierarchy of the country
 var nested = d3.nest()
   .key(function(d){return d.country;})
   .entries(fixedData)
@@ -121,12 +144,14 @@ var nested = d3.nest()
 
   //console.log(nested);
 var timer;
-
+//styling chart
     chart.selectAll("path")
         .data(nested)
         .enter()
         .append("path")
-        .attr("class", "line")
+        .attr("class", function(d){
+          return d.key.toLowerCase().split(" ").join("");
+        })
         .attr("d", function(d){ return line(d.values)})
         .style("stroke","deeppink")
         .style("stroke-width","1.5px")
@@ -146,7 +171,7 @@ var timer;
           d3.select("h2")
             .text(d.key)
 
-            console.log(d)
+       
 
         })
 
@@ -159,14 +184,30 @@ var timer;
           timer = window.setTimeout(function(){
                  d3.selectAll("path")
               .style("stroke","deeppink")
-          },5)
-         
-
-              
+          },5);              
 
         });
 
+        d3.select("#search-button")
+          .on("click",function(){
+            var result = d3.select("#search-box").node().value.toLowerCase().split(" ").join("")
+            console.log(result);
 
+
+
+            // this removes timer that turns them all blue
+                  //clearTimeout(timer)
+                 // this turns all lines grey
+                  d3.selectAll("path")
+                    .style("stroke","#cccccc")
+                // this turns them blue on hover
+                  d3.select("."+result)
+                    .style("stroke","blue")
+                    .style("stroke-width","1.8px")
+                    .moveToFront();
+
+
+          })
   
   //focus line
   // var focus = chart.append("g")
